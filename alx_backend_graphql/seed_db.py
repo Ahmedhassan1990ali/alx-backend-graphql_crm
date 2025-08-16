@@ -2,7 +2,7 @@ import os
 import django
 from faker import Faker
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'graphql_crm.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'alx-backend-graphql.settings')
 django.setup()
 
 from crm.models import Customer, Product, Order
