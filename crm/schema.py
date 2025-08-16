@@ -1,11 +1,13 @@
 import graphene
-from graphene_django import DjangoObjectType
+from graphene_django import DjangoObjectType, DjangoFilterConnectionField
 from django.db import transaction
 from .models import Customer, Product, Order
+from .filters import CustomerFilter, ProductFilter, OrderFilter
 from django.core.exceptions import ValidationError
 from django.db.utils import IntegrityError
 from django.core.validators import validate_email
 import re
+
 
 # Object Types
 class CustomerType(DjangoObjectType):
@@ -232,6 +234,24 @@ class CreateOrder(graphene.Mutation):
                 success=False
             )
 
+class CustomerNode(DjangoObjectType):
+    class Meta:
+        model = Customer
+        interfaces = (graphene.relay.Node,)
+        filterset_class = CustomerFilter
+
+class ProductNode(DjangoObjectType):
+    class Meta:
+        model = Product
+        interfaces = (graphene.relay.Node,)
+        filterset_class = ProductFilter
+
+class OrderNode(DjangoObjectType):
+    class Meta:
+        model = Order
+        interfaces = (graphene.relay.Node,)
+        filterset_class = OrderFilter
+
 class Mutation(graphene.ObjectType):
     create_customer = CreateCustomer.Field()
     bulk_create_customers = BulkCreateCustomers.Field()
@@ -240,8 +260,16 @@ class Mutation(graphene.ObjectType):
 
 class Query(graphene.ObjectType):
     customers = graphene.List(CustomerType)
+    customer = graphene.relay.Node.Field(CustomerNode)
+    all_customers = DjangoFilterConnectionField(CustomerNode)
+
     products = graphene.List(ProductType)
+    product = graphene.relay.Node.Field(ProductNode)
+    all_products = DjangoFilterConnectionField(ProductNode)
+
     orders = graphene.List(OrderType)
+    order = graphene.relay.Node.Field(OrderNode)
+    all_orders = DjangoFilterConnectionField(OrderNode)
 
     def resolve_customers(root, info):
         return Customer.objects.all()
@@ -251,3 +279,20 @@ class Query(graphene.ObjectType):
 
     def resolve_orders(root, info):
         return Order.objects.select_related('customer').prefetch_related('products').all()
+    
+    def resolve_all_customers(self, info, **kwargs):
+        return CustomerFilter(kwargs).qs
+
+    def resolve_all_products(self, info, **kwargs):
+        return ProductFilter(kwargs).qs
+
+    def resolve_all_orders(self, info, **kwargs):
+        return OrderFilter(kwargs).qs
+
+    
+
+    
+
+    
+
+    
