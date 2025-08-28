@@ -132,6 +132,7 @@ GRAPHENE = {
 
 CRONJOBS = [
     ('*/5 * * * *', 'crm.cron.log_crm_heartbeat'),  # Run every 5 minutes :cite[1]:cite[7]
+    ('0 */12 * * *', 'crm.cron.update_low_stock'),  # Run every 12 hours
 ]
 
 CRONTAB_COMMAND_SUFFIX = '>> /tmp/crm_heartbeat_log.txt 2>&1'

@@ -1,7 +1,7 @@
 import graphene
 from graphene_django import DjangoObjectType, DjangoFilterConnectionField
 from django.db import transaction
-from .models import Customer, Product, Order
+from crm.models import Product, Customer, Order
 from .filters import CustomerFilter, ProductFilter, OrderFilter
 from django.core.exceptions import ValidationError
 from django.db.utils import IntegrityError
@@ -252,11 +252,54 @@ class OrderNode(DjangoObjectType):
         interfaces = (graphene.relay.Node,)
         filterset_class = OrderFilter
 
+class UpdateLowStockProducts(graphene.Mutation):
+    class Arguments:
+        pass  # No arguments needed for this mutation
+
+    products = graphene.List(ProductType)
+    message = graphene.String()
+    success = graphene.Boolean()
+
+    @staticmethod
+    @transaction.atomic
+    def mutate(root, info):
+        try:
+            # Query products with stock less than 10
+            low_stock_products = Product.objects.filter(stock__lt=10)
+            
+            if not low_stock_products.exists():
+                return UpdateLowStockProducts(
+                    products=[],
+                    message="No low-stock products found",
+                    success=True
+                )
+            
+            # Update stock levels (increment by 10)
+            updated_products = []
+            for product in low_stock_products:
+                product.stock += 10
+                product.save()
+                updated_products.append(product)
+            
+            return UpdateLowStockProducts(
+                products=updated_products,
+                message=f"Updated {len(updated_products)} low-stock products",
+                success=True
+            )
+            
+        except Exception as e:
+            return UpdateLowStockProducts(
+                products=[],
+                message=f"Error updating low-stock products: {str(e)}",
+                success=False
+            )
+
 class Mutation(graphene.ObjectType):
     create_customer = CreateCustomer.Field()
     bulk_create_customers = BulkCreateCustomers.Field()
     create_product = CreateProduct.Field()
     create_order = CreateOrder.Field()
+    update_low_stock_products = UpdateLowStockProducts.Field()
 
 class Query(graphene.ObjectType):
     customers = graphene.List(CustomerType)
